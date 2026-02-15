@@ -20,6 +20,7 @@ client.on('ready', () => {
 	}
 
 	let isRunning = false;
+	let lastAlertAt = 0;
 	const runCheck = async () => {
 		if (isRunning) return;
 		isRunning = true;
@@ -28,6 +29,8 @@ client.on('ready', () => {
 			const stats = getSystemStats(monitorConfig);
 			const reasons = checkThresholds(stats, monitorConfig.thresholds);
 			if (reasons.length === 0) return;
+			const now = Date.now();
+			if (now - lastAlertAt < monitorConfig.notifyCooldownSec * 1000) return;
 
 			const channel = await client.channels.fetch(monitorConfig.alertChannelId);
 			if (!channel || !channel.isTextBased()) {
@@ -44,6 +47,7 @@ client.on('ready', () => {
 			].join('\n');
 
 			await channel.send(message);
+			lastAlertAt = now;
 		} catch (error) {
 			console.error('監視チェックに失敗しました:', error);
 		} finally {

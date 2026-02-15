@@ -4,12 +4,11 @@ const { execFileSync } = require('node:child_process');
 const DEFAULTS = {
 	alertChannelId: '',
 	intervalSec: 60,
+	notifyCooldownSec: 600,
 	diskPath: '/',
 	thresholds: {
-		cpuIdleMin: 10,
 		ioWaitMin: 20,
 		memFreePercentMin: 5,
-		diskUsagePercentMax: 90,
 	},
 };
 
@@ -20,12 +19,11 @@ function mergeMonitoringConfig(input) {
 	return {
 		alertChannelId: typeof config.alertChannelId === 'string' ? config.alertChannelId : DEFAULTS.alertChannelId,
 		intervalSec: Number.isFinite(config.intervalSec) ? config.intervalSec : DEFAULTS.intervalSec,
+		notifyCooldownSec: Number.isFinite(config.notifyCooldownSec) ? config.notifyCooldownSec : DEFAULTS.notifyCooldownSec,
 		diskPath: typeof config.diskPath === 'string' && config.diskPath ? config.diskPath : DEFAULTS.diskPath,
 		thresholds: {
-			cpuIdleMin: Number.isFinite(thresholds.cpuIdleMin) ? thresholds.cpuIdleMin : DEFAULTS.thresholds.cpuIdleMin,
 			ioWaitMin: Number.isFinite(thresholds.ioWaitMin) ? thresholds.ioWaitMin : DEFAULTS.thresholds.ioWaitMin,
 			memFreePercentMin: Number.isFinite(thresholds.memFreePercentMin) ? thresholds.memFreePercentMin : DEFAULTS.thresholds.memFreePercentMin,
-			diskUsagePercentMax: Number.isFinite(thresholds.diskUsagePercentMax) ? thresholds.diskUsagePercentMax : DEFAULTS.thresholds.diskUsagePercentMax,
 		},
 	};
 }
@@ -119,26 +117,18 @@ function getSystemStats(config) {
 
 function checkThresholds(stats, thresholds) {
 	const reasons = [];
-	const { vmstat, mem, disk } = stats;
+	const { vmstat, mem } = stats;
 
-	if (vmstat.id < thresholds.cpuIdleMin) {
-		reasons.push(`CPU idle low (id=${vmstat.id}%)`);
-	}
-
-	if (vmstat.wa >= thresholds.ioWaitMin) {
+	if (vmstat.wa > thresholds.ioWaitMin) {
 		reasons.push(`I/O wait high (wa=${vmstat.wa}%)`);
 	}
 
-	if (vmstat.swpd > 0 || vmstat.si > 0 || vmstat.so > 0) {
-		reasons.push(`Swap in use (swpd=${vmstat.swpd}, si=${vmstat.si}, so=${vmstat.so})`);
+	if (vmstat.si > 0 || vmstat.so > 0) {
+		reasons.push(`Swap activity (si=${vmstat.si}, so=${vmstat.so})`);
 	}
 
 	if (mem.freePercent < thresholds.memFreePercentMin) {
 		reasons.push(`Memory low (free=${mem.freePercent.toFixed(1)}%)`);
-	}
-
-	if (disk.usedPercent > thresholds.diskUsagePercentMax) {
-		reasons.push(`Disk usage high (used=${disk.usedPercent}%)`);
 	}
 
 	return reasons;
