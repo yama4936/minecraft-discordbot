@@ -1,6 +1,7 @@
 import {
   bigint,
   bigserial,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -58,7 +59,7 @@ export const playerObservations = pgTable("player_observations", {
   userId: text("user_id").notNull(),
   observedAt: bigint("observed_at", { mode: "number" }).notNull(),
   level: integer("level").notNull(),
-  ping: integer("ping"),
+  ping: doublePrecision("ping"),
   exp: bigint("exp", { mode: "number" }),
   sourceEventId: text("source_event_id").notNull().references(() => ingestEvents.eventId),
 }, (table) => [

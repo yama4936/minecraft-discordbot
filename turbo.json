@@ -1,5 +1,12 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalPassThroughEnv": [
+    "DATABASE_URL",
+    "INGEST_SIGNING_KEYS",
+    "LEGACY_INGEST_TOKEN",
+    "LEGACY_STATS_API_URL",
+    "PALWORLD_SERVER_ID"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

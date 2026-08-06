@@ -1,0 +1,1 @@
+ALTER TABLE "player_observations" ALTER COLUMN "ping" SET DATA TYPE double precision;
