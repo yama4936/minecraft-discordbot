@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const config = require('../config.json');
+const config = require('../config');
 const { mergeMonitoringConfig, getSystemStats, formatStats, checkThresholds } = require('../monitoring');
 
 module.exports = {

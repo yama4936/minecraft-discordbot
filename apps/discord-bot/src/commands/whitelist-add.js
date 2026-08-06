@@ -1,6 +1,6 @@
 const { execFileSync } = require('node:child_process');
 const { SlashCommandBuilder } = require('discord.js');
-const { screenSession } = require('../config.json');
+const { screenSession } = require('../config');
 
 module.exports = {
 	data: new SlashCommandBuilder()

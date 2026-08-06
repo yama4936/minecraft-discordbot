@@ -1,0 +1,12 @@
+{
+  "name": "@palworld/collector",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/collector.js",
+    "build": "node --check src/collector.js",
+    "check": "node --check src/collector.js",
+    "test": "node --test"
+  }
+}

@@ -1,16 +1,27 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits, MessageFlags } = require('discord.js');
-const config = require('./config.json');
+const config = require('./config');
 const { mergeMonitoringConfig, getSystemStats, checkThresholds, formatStats } = require('./monitoring');
+const { startPalworldMonitoring } = require('./palworld-monitoring');
 const { token } = config;
+const DISPLAY_NAME = 'サーバー監視Bot';
 
 // Only the intent needed for slash commands in guilds.
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 client.commands = new Collection();
 
-client.on('ready', () => {
+client.on('ready', async () => {
+	if (client.user.username !== DISPLAY_NAME) {
+		try {
+			await client.user.setUsername(DISPLAY_NAME);
+			console.log(`Bot名を「${DISPLAY_NAME}」に変更しました。`);
+		} catch (error) {
+			console.error('Bot名の変更に失敗しました:', error);
+		}
+	}
+
 	console.log(`${client.user.tag}でログインしました。`);
 
 	const monitorConfig = mergeMonitoringConfig(config.monitoring);
@@ -19,8 +30,9 @@ client.on('ready', () => {
 		return;
 	}
 
+	startPalworldMonitoring(client, monitorConfig.alertChannelId);
+
 	let isRunning = false;
-	let lastAlertAt = 0;
 	const runCheck = async () => {
 		if (isRunning) return;
 		isRunning = true;
@@ -29,8 +41,6 @@ client.on('ready', () => {
 			const stats = getSystemStats(monitorConfig);
 			const reasons = checkThresholds(stats, monitorConfig.thresholds);
 			if (reasons.length === 0) return;
-			const now = Date.now();
-			if (now - lastAlertAt < monitorConfig.notifyCooldownSec * 1000) return;
 
 			const channel = await client.channels.fetch(monitorConfig.alertChannelId);
 			if (!channel || !channel.isTextBased()) {
@@ -47,7 +57,6 @@ client.on('ready', () => {
 			].join('\n');
 
 			await channel.send(message);
-			lastAlertAt = now;
 		} catch (error) {
 			console.error('監視チェックに失敗しました:', error);
 		} finally {

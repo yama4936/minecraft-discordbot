@@ -1,0 +1,16 @@
+[Unit]
+Description=Palworld Discord Bot
+After=default.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/lsemi/palworld-server
+EnvironmentFile=%h/.config/palworld/palworld.env
+ExecStart=/home/lsemi/.nvm/versions/node/v22.16.0/bin/node apps/discord-bot/src/index.js
+Restart=always
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

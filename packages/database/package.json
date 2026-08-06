@@ -1,0 +1,29 @@
+{
+  "name": "@palworld/database",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "check": "tsc --noEmit",
+    "generate": "drizzle-kit generate",
+    "migrate": "tsx src/migrate.ts",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@palworld/contracts": "workspace:*",
+    "@neondatabase/serverless": "^1.0.2",
+    "drizzle-orm": "^0.44.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24.7.2",
+    "drizzle-kit": "^0.31.5",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

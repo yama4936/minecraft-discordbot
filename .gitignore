@@ -1,3 +1,37 @@
+# Dependencies and build output
 node_modules/
-.DS_Store
+.next/
+dist/
+.turbo/
+coverage/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
 config.json
+*.secret
+.palworld-stats-secret
+
+# Runtime data
+.palworld-live-*.json
+.palworld-last-*
+*-history-*.json
+*.log
+*.pid
+.runtime/
+
+# Python runtime
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.so
+
+# Editors and OS files
+.DS_Store
+.idea/
+.vscode/
+
+# Vercel local linkage
+.vercel/

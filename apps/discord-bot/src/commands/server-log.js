@@ -2,7 +2,7 @@
 const fs = require('node:fs'); // ファイルシステム操作用モジュール
 const path = require('node:path'); // ファイルパス操作用モジュール
 const { SlashCommandBuilder } = require('discord.js'); // Discord.js のスラッシュコマンド作成用
-const { minecraftPath } = require('../config.json'); // 設定ファイルから Minecraft サーバーのパスを取得
+const { minecraftPath } = require('../config'); // 設定ファイルから Minecraft サーバーのパスを取得
 
 // Discord メッセージの最大文字数
 const MAX_REPLY_CHARS = 1800;

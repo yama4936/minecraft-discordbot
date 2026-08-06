@@ -1,16 +1,19 @@
 {
-  "name": "minecraft-discordbot",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "palworld-server",
+  "private": true,
+  "packageManager": "pnpm@11.16.0",
   "scripts": {
-    "start": "node index.js"
+    "build": "turbo run build",
+    "check": "turbo run check",
+    "dev": "turbo run dev --parallel",
+    "test": "turbo run test",
+    "format": "prettier --write .",
+    "db:generate": "pnpm --filter @palworld/database generate",
+    "db:migrate": "pnpm --filter @palworld/database migrate"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "dependencies": {
-    "discord.js": "^14.25.1"
+  "devDependencies": {
+    "prettier": "^3.6.2",
+    "turbo": "^2.5.6",
+    "typescript": "^5.9.3"
   }
 }

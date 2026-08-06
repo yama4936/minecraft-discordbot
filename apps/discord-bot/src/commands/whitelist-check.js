@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { SlashCommandBuilder } = require('discord.js');
-const { minecraftPath } = require('../config.json');
+const { minecraftPath } = require('../config');
 
 module.exports = {
 	data: new SlashCommandBuilder()
