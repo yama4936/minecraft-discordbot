@@ -2,8 +2,8 @@
 
 ## 切替対象
 
-- 待機デプロイ: `dpl_DATBEqisKkELWvAmQs1Rjwn19xTd`
-- 待機URL: `https://palworld-server-guide-n9z8uk85r-yama4936s-projects.vercel.app`
+- 待機デプロイ: `dpl_2suoHGybhEeYsuLojYqesDVexnwf`
+- 待機URL: `https://palworld-server-guide-arp0gdmmk-yama4936s-projects.vercel.app`
 - 現行デプロイ: `dpl_Afe1km8R9DgxAKGwnaHD7u74pd7x`
 - 公開URL: `https://new-chat-mu-three.vercel.app`
 - `lsemi` モノレポ: `/home/lsemi/palworld-server`
@@ -15,7 +15,7 @@
 ローカルのモノレポで待機デプロイを昇格します。
 
 ```sh
-vercel promote dpl_DATBEqisKkELWvAmQs1Rjwn19xTd --yes
+vercel promote dpl_2suoHGybhEeYsuLojYqesDVexnwf --yes
 curl -fsS https://new-chat-mu-three.vercel.app/api/health
 ```
 
