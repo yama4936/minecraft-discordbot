@@ -7,6 +7,7 @@ function createIngestClient({ legacyUrl, legacySecretFile }) {
   const serverId = process.env.PALWORLD_SERVER_ID || "main";
   const keyId = process.env.PALWORLD_INGEST_KEY_ID || "";
   const signingSecret = process.env.PALWORLD_INGEST_SECRET || "";
+  const protectionBypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET || "";
 
   return async function postPayload(payload) {
     const eventId = randomUUID();
@@ -32,6 +33,9 @@ function createIngestClient({ legacyUrl, legacySecretFile }) {
     } else {
       const legacyToken = fs.readFileSync(legacySecretFile, "utf8").trim();
       headers.Authorization = `Bearer ${legacyToken}`;
+    }
+    if (protectionBypass) {
+      headers["x-vercel-protection-bypass"] = protectionBypass;
     }
 
     const response = await fetch(url, {

@@ -1,4 +1,5 @@
 import type { IngestEnvelope, LegacyIngestPayload } from "@palworld/contracts";
+import { sql } from "drizzle-orm";
 import type { Database } from "./client";
 import {
   ingestEvents,
@@ -15,12 +16,22 @@ function payloadKind(payload: LegacyIngestPayload) {
   return "type" in payload ? payload.type : "live-snapshot";
 }
 
-async function upsertPlayer(db: Database, serverId: string, userId: string, displayName: string) {
-  await db.insert(players).values({ serverId, userId, displayName })
-    .onConflictDoUpdate({
-      target: [players.serverId, players.userId],
-      set: { displayName, updatedAt: new Date() },
-    });
+type PlayerIdentity = { userId: string; name: string };
+
+async function upsertPlayers(db: Database, serverId: string, identities: PlayerIdentity[]) {
+  const unique = [...new Map(identities.map((player) => [player.userId, player])).values()];
+  if (!unique.length) return;
+  await db.insert(players).values(unique.map((player) => ({
+    serverId,
+    userId: player.userId,
+    displayName: player.name,
+  }))).onConflictDoUpdate({
+    target: [players.serverId, players.userId],
+    set: {
+      displayName: sql`excluded.display_name`,
+      updatedAt: new Date(),
+    },
+  });
 }
 
 export async function ingest(db: Database, envelope: IngestEnvelope) {
@@ -37,7 +48,6 @@ export async function ingest(db: Database, envelope: IngestEnvelope) {
     payload: payload as unknown as Record<string, unknown>,
   }).onConflictDoNothing({ target: ingestEvents.eventId });
 
-  let imported = 0;
   if (!("type" in payload)) {
     await db.insert(liveSnapshots).values({
       sourceEventId: eventId,
@@ -53,87 +63,75 @@ export async function ingest(db: Database, envelope: IngestEnvelope) {
       onlineCount: payload.players.length,
     }).onConflictDoUpdate({
       target: [onlinePoints.serverId, onlinePoints.observedAt],
-      set: { onlineCount: payload.players.length, sourceEventId: eventId },
+      set: { onlineCount: sql`excluded.online_count`, sourceEventId: eventId },
     });
-    for (const player of payload.players) {
-      await upsertPlayer(db, serverId, player.userId, player.name);
-      await db.insert(playerObservations).values({
+    await upsertPlayers(db, serverId, payload.players);
+    if (payload.players.length) {
+      await db.insert(playerObservations).values(payload.players.map((player) => ({
         serverId,
         userId: player.userId,
         observedAt: payload.timestamp,
         level: player.level,
         ping: player.ping ?? null,
         sourceEventId: eventId,
-      }).onConflictDoNothing({
+      }))).onConflictDoNothing({
         target: [playerObservations.serverId, playerObservations.userId, playerObservations.observedAt],
       });
-      imported += 1;
     }
-    return { imported, active: payload.players.length };
+    return { imported: payload.players.length, active: payload.players.length };
   }
 
   if (payload.type === "online-history") {
-    for (const point of payload.events) {
-      await db.insert(onlinePoints).values({
+    if (payload.events.length) {
+      await db.insert(onlinePoints).values(payload.events.map((point) => ({
         serverId,
         observedAt: point.timestamp,
         onlineCount: point.online,
         sourceEventId: eventId,
-      }).onConflictDoUpdate({
+      }))).onConflictDoUpdate({
         target: [onlinePoints.serverId, onlinePoints.observedAt],
-        set: { onlineCount: point.online, sourceEventId: eventId },
+        set: {
+          onlineCount: sql`excluded.online_count`,
+          sourceEventId: eventId,
+        },
       });
-      imported += 1;
     }
+    return { imported: payload.events.length, active: 0 };
   }
 
   if (payload.type === "connection-history-v2" || payload.type === "playtime-history") {
-    const completed = payload.events;
-    for (const session of completed) {
-      await upsertPlayer(db, serverId, session.userId, session.name);
-      await db.insert(playerSessions).values({
+    const active = payload.type === "connection-history-v2" ? payload.active : [];
+    const allSessions = [...payload.events, ...active];
+    await upsertPlayers(db, serverId, allSessions);
+    if (allSessions.length) {
+      await db.insert(playerSessions).values(allSessions.map((session) => ({
         serverId,
         userId: session.userId,
         displayName: session.name,
         startedAt: session.startedAt,
-        endedAt: session.endedAt,
+        endedAt: "endedAt" in session ? session.endedAt : null,
         sourceEventId: eventId,
-      }).onConflictDoUpdate({
+      }))).onConflictDoUpdate({
         target: [playerSessions.serverId, playerSessions.userId, playerSessions.startedAt],
-        set: { endedAt: session.endedAt, displayName: session.name, sourceEventId: eventId },
-      });
-      imported += 1;
-    }
-    if (payload.type === "connection-history-v2") {
-      for (const session of payload.active) {
-        await upsertPlayer(db, serverId, session.userId, session.name);
-        await db.insert(playerSessions).values({
-          serverId,
-          userId: session.userId,
-          displayName: session.name,
-          startedAt: session.startedAt,
-          endedAt: null,
+        set: {
+          displayName: sql`excluded.display_name`,
+          endedAt: sql`excluded.ended_at`,
           sourceEventId: eventId,
-        }).onConflictDoUpdate({
-          target: [playerSessions.serverId, playerSessions.userId, playerSessions.startedAt],
-          set: { displayName: session.name, sourceEventId: eventId },
-        });
-      }
-      return { imported, active: payload.active.length };
+        },
+      });
     }
+    return { imported: payload.events.length, active: active.length };
   }
 
   if (payload.type === "join-history") {
-    for (const event of payload.events) {
-      await upsertPlayer(db, serverId, event.userId, event.name);
-      imported += 1;
-    }
+    await upsertPlayers(db, serverId, payload.events);
+    return { imported: payload.events.length, active: 0 };
   }
 
   if (payload.type === "level-history" || payload.type === "rich-history") {
-    for (const event of payload.events) {
-      await upsertPlayer(db, serverId, event.userId, event.name);
-      await db.insert(playerObservations).values({
+    await upsertPlayers(db, serverId, payload.events);
+    if (payload.events.length) {
+      await db.insert(playerObservations).values(payload.events.map((event) => ({
         serverId,
         userId: event.userId,
         observedAt: event.timestamp,
@@ -141,25 +139,32 @@ export async function ingest(db: Database, envelope: IngestEnvelope) {
         exp: event.exp ?? null,
         ping: null,
         sourceEventId: eventId,
-      }).onConflictDoUpdate({
+      }))).onConflictDoUpdate({
         target: [playerObservations.serverId, playerObservations.userId, playerObservations.observedAt],
-        set: { level: event.level, exp: event.exp ?? null, sourceEventId: eventId },
+        set: {
+          level: sql`excluded.level`,
+          exp: sql`excluded.exp`,
+          sourceEventId: eventId,
+        },
       });
       if (payload.type === "rich-history") {
-        await db.insert(richSnapshots).values({
+        await db.insert(richSnapshots).values(payload.events.map((event) => ({
           serverId,
           userId: event.userId,
           observedAt: event.timestamp,
           detail: event as unknown as Record<string, unknown>,
           sourceEventId: eventId,
-        }).onConflictDoUpdate({
+        }))).onConflictDoUpdate({
           target: [richSnapshots.serverId, richSnapshots.userId, richSnapshots.observedAt],
-          set: { detail: event as unknown as Record<string, unknown>, sourceEventId: eventId },
+          set: {
+            detail: sql`excluded.detail`,
+            sourceEventId: eventId,
+          },
         });
       }
-      imported += 1;
     }
+    return { imported: payload.events.length, active: 0 };
   }
 
-  return { imported, active: 0 };
+  return { imported: 0, active: 0 };
 }

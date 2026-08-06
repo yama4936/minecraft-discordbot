@@ -11,6 +11,7 @@ const RICH_OUTPUT_PATH = path.join(BOT_DIR, ".palworld-live-rich.json");
 const RICH_STATE_PATH = path.join(BOT_DIR, ".palworld-last-rich-backup");
 const SAVE_ROOT = process.env.PALWORLD_SAVE_ROOT || "/ssd/SaveGames/0/B7818E3F934D4285B10DFCCA9142A4CB/backup/world";
 const INTERVAL_MS = Number(process.env.PALWORLD_COLLECT_INTERVAL_MS) || 5 * 60 * 1000;
+const COLLECT_ONCE = process.env.PALWORLD_COLLECT_ONCE === "1";
 const postPayload = createIngestClient({
   legacyUrl: "https://new-chat-mu-three.vercel.app/api/ingest",
   legacySecretFile: SECRET_PATH,
@@ -189,19 +190,31 @@ async function sendRichSnapshot() {
 
 let running = false;
 async function collect() {
-  if (running) return;
+  if (running) return true;
   running = true;
   try {
     const players = await sendLiveSnapshot();
     await sendConnectionHistory(players);
     await sendRichSnapshot();
+    return true;
   } catch (error) {
     console.error(`${new Date().toISOString()} ${error.stack || error.message}`);
+    return false;
   } finally {
     running = false;
   }
 }
 
-console.log("Palworld統計収集を開始しました。5分ごとにオンライン情報と最新バックアップを同期します。");
-collect();
-setInterval(collect, INTERVAL_MS);
+async function main() {
+  console.log(COLLECT_ONCE
+    ? "Palworld統計収集を1回実行します。"
+    : "Palworld統計収集を開始しました。5分ごとにオンライン情報と最新バックアップを同期します。");
+  const succeeded = await collect();
+  if (COLLECT_ONCE) {
+    if (!succeeded) process.exitCode = 1;
+    return;
+  }
+  setInterval(collect, INTERVAL_MS);
+}
+
+main();

@@ -1,0 +1,10 @@
+.git
+.turbo
+**/.turbo
+node_modules
+**/node_modules
+**/.next
+**/*.tsbuildinfo
+.env*
+.agents
+skills-lock.json
