@@ -10,7 +10,6 @@ ExecStart=/home/lsemi/.nvm/versions/node/v22.16.0/bin/node apps/discord-bot/src/
 Restart=always
 RestartSec=10
 NoNewPrivileges=true
-PrivateTmp=true
 
 [Install]
 WantedBy=default.target

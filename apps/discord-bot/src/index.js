@@ -12,7 +12,7 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 client.commands = new Collection();
 
-client.on('ready', async () => {
+client.on(Events.ClientReady, async () => {
 	if (client.user.username !== DISPLAY_NAME) {
 		try {
 			await client.user.setUsername(DISPLAY_NAME);
